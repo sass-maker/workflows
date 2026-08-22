@@ -15,7 +15,7 @@ one you need, not all of them.
 | SEO content sufficiency: article inventory, competitive intent/page gaps, comparison/alternative/use-case pages, create or publish missing pages | `skills/content-coverage/SKILL.md` |
 | Performance: Core Web Vitals, Lighthouse distributions, "why is X slow" | `psi-swarm/SKILL.md` (standalone product; exposed through the skill symlink) |
 | Outcome trends: SERP classes over time, "did results move", weekly run | `skills/geo-observatory/SKILL.md` |
-| Ahrefs Site Audit: provider Health Score, crawl freshness, crawled URLs, errors/warnings/notices | Run `node scripts/ahrefs-site-audit-health.mjs`; see [Ahrefs Site Audit health](../../docs/ahrefs-site-audit.md) |
+| Ahrefs Site Audit: provider Health Score, then source fixes for crawl errors | Run `node scripts/ahrefs-site-audit-health.mjs`, then apply every **error** action from the report in the owning repo. See [Ahrefs Site Audit health](../../docs/ahrefs-site-audit.md). Do not stop at the score table. Do not deploy. Do not invent ratings. |
 | Public usability: click around, guest journeys, blank/broken pages, navigation, search/detail, downloads, primary product actions | `skills/public-product-smoke/SKILL.md` |
 
 ## Combined mode — "full health check"

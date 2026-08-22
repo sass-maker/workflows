@@ -1,8 +1,8 @@
 # Ahrefs Site Audit health
 
-Collect Ahrefs Site Audit Health Score, crawl freshness, crawled internal
-URLs, and error/warning/notice counts for the canonical root brands owned by
-Site Health.
+Collect Ahrefs Site Audit Health Score for Site Health's canonical roots,
+then turn crawl evidence into source actions. A report without remediation
+is incomplete.
 
 This is a reusable operator workflow. It is not a Site Health product surface
 and it is not part of the credential-free public availability catalog.
@@ -13,6 +13,10 @@ and it is not part of the credential-free public availability catalog.
 node scripts/ahrefs-site-audit-health.mjs
 ```
 
+The command always attempts Ahrefs, then crawls each root sitemap and emits
+source actions. Use `--no-act` only when you need the provider report without
+the local crawl.
+
 Optional flags:
 
 - `--brands-path <file>` — JSON catalog with a `brands` array. Defaults to
@@ -21,6 +25,25 @@ Optional flags:
 - `--output <file>` — markdown report path. Defaults to
   `docs/ahrefs-site-audit-latest.md`.
 - `--max-age-days <n>` — crawl freshness window. Defaults to `14`.
+- `--no-act` — skip the local crawl and action table.
+
+## Act on the results
+
+The markdown report includes a **Local crawl and source actions** table.
+Every `error` row is work:
+
+| Issue | Source action |
+|---|---|
+| `http-4xx` | Restore the page or remove it from the sitemap |
+| `missing-title` | Add a unique HTML title |
+| `missing-h1` | Add one visible page-level `h1` |
+| `missing-canonical` | Warning only unless the page is already being edited |
+
+Apply error actions in the owning repository. Do not deploy. Do not invent
+review scores, aggregate ratings, or other social proof. Skip agent surfaces
+(`llms.txt`, Markdown alternates, `/api/*`).
+
+The process exits non-zero while Ahrefs is blocked or any error action remains.
 
 ## Credentials
 
@@ -30,6 +53,7 @@ it in this repository's secrets, or persist provider response bodies.
 Site Audit is a paid Ahrefs Management API. The free Domain Rating key used
 by Drank and PSI Swarm is not sufficient; a missing entitlement fails closed
 with `auth-entitlement-error` (HTTP 401 or 403) and writes no zero scores.
+The local crawl still runs so there are actions to apply.
 
 The collector fails closed when:
 
@@ -46,7 +70,8 @@ Unavailable metrics stay null. They are never written as zero.
 |---|---|
 | Canonical root brand catalog | Site Health |
 | Dashboard, Search Console, AI visibility, performance portfolio | Site Health |
-| Reusable collector, markdown report, and this skill adapter | Workflows and Skills |
+| Reusable collector, local crawl, action table, and this skill adapter | Workflows and Skills |
+| Source fixes for a flagged page | The product repository that owns the domain |
 
 The preserved copy under `preserved/legacy-fleet-tooling/` is historical. Do
 not invoke it.
@@ -54,6 +79,6 @@ not invoke it.
 ## Report
 
 The generated markdown at `docs/ahrefs-site-audit-latest.md` is operator
-evidence. It contains public root domains, crawl dates, and Site Audit
-counts. It does not contain API keys, Authorization headers, or raw Ahrefs
-payloads.
+evidence. It contains public root domains, crawl dates, Site Audit counts,
+and source actions. It does not contain API keys, Authorization headers, or
+raw Ahrefs payloads.

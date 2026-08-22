@@ -224,6 +224,7 @@ test('missing Site Health catalog fails closed without contacting Ahrefs', async
   let called = false;
   const outcome = await runAhrefsSiteAuditHealth({
     apiKey: 'k',
+    act: false,
     brandsPath: join(directory, 'missing.json'),
     outputPath,
     fetchImpl: async () => {
@@ -249,6 +250,7 @@ test('CLI writes a sanitized report from the Site Health catalog shape', async (
 
   const outcome = await runAhrefsSiteAuditHealth({
     apiKey: 'k',
+    act: false,
     brandsPath,
     outputPath,
     now: NOW,
@@ -270,6 +272,7 @@ test('missing key through the operator entrypoint writes a blocked report', asyn
   try {
     const outcome = await runAhrefsSiteAuditHealth({
       brands: BRANDS,
+      act: false,
       outputPath,
       now: NOW,
     });
@@ -294,4 +297,58 @@ test('normalizeBrands reads the Site Health catalog contract', () => {
     () => loadCanonicalBrands(join(tmpdir(), 'does-not-exist-root-brands.json')),
     (error) => error.code === 'missing-brand-catalog',
   );
+});
+
+test('blocked Ahrefs still emits local source actions', async () => {
+  const directory = mkdtempSync(join(tmpdir(), 'ahrefs-site-audit-'));
+  const outputPath = join(directory, 'report.md');
+  const pages = {
+    'https://karte.cc/sitemap.xml': {
+      status: 200,
+      headers: { get: () => 'application/xml' },
+      text: async () => '<urlset><url><loc>https://karte.cc/about</loc></url></urlset>',
+    },
+    'https://karte.cc/sitemap-index.xml': {
+      status: 404,
+      headers: { get: () => 'text/plain' },
+      text: async () => 'missing',
+    },
+    'https://karte.cc/about': {
+      status: 200,
+      headers: { get: () => 'text/html; charset=utf-8' },
+      text: async () => '<html><head><title>About</title><link rel="canonical" href="https://karte.cc/about"></head><body><h2>About</h2></body></html>',
+    },
+    'https://sassmaker.com/sitemap.xml': {
+      status: 200,
+      headers: { get: () => 'application/xml' },
+      text: async () => '<urlset><url><loc>https://sassmaker.com/</loc></url></urlset>',
+    },
+    'https://sassmaker.com/sitemap-index.xml': {
+      status: 404,
+      headers: { get: () => 'text/plain' },
+      text: async () => 'missing',
+    },
+    'https://sassmaker.com/': {
+      status: 200,
+      headers: { get: () => 'text/html; charset=utf-8' },
+      text: async () => '<html><head><title>SaaS Maker</title><link rel="canonical" href="https://sassmaker.com/"></head><body><h1>Studio</h1></body></html>',
+    },
+  };
+  const outcome = await runAhrefsSiteAuditHealth({
+    apiKey: 'k',
+    brands: BRANDS,
+    outputPath,
+    now: NOW,
+    fetchImpl: async () => { throw new Error('ahrefs down'); },
+    localFetchImpl: async (url) => pages[url] ?? {
+      status: 404,
+      headers: { get: () => 'text/plain' },
+      text: async () => 'missing',
+    },
+  });
+  assert.equal(outcome.error.code, 'request-failed');
+  assert.equal(outcome.actions.length, 1);
+  assert.equal(outcome.actions[0].code, 'missing-h1');
+  assert.equal(outcome.actions[0].url, 'https://karte.cc/about');
+  assert.match(readFileSync(outputPath, 'utf8'), /Add one visible page-level h1/);
 });

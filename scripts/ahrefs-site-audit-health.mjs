@@ -13,6 +13,10 @@ import {
   renderAhrefsSiteAuditMarkdown,
   sanitizeAhrefsSiteAuditResult,
 } from '../lib/ahrefs-site-audit.mjs';
+import {
+  collectLocalSiteAudit,
+  renderLocalSiteAuditMarkdown,
+} from '../lib/local-site-audit.mjs';
 
 const REPOSITORY_ROOT = resolve(import.meta.dirname, '..');
 const FLEET_ROOT = resolve(REPOSITORY_ROOT, '..');
@@ -48,9 +52,13 @@ export function loadCanonicalBrands(path = DEFAULT_BRANDS_PATH) {
 export async function runAhrefsSiteAuditHealth(options = {}) {
   const outputPath = resolve(options.outputPath ?? DEFAULT_OUTPUT_PATH);
   mkdirSync(dirname(outputPath), { recursive: true });
+  const act = options.act !== false;
+  let brands = options.brands;
+  let ahrefsError = null;
+  let result = null;
   try {
-    const brands = options.brands ?? loadCanonicalBrands(options.brandsPath ?? DEFAULT_BRANDS_PATH);
-    const result = sanitizeAhrefsSiteAuditResult(
+    brands = brands ?? loadCanonicalBrands(options.brandsPath ?? DEFAULT_BRANDS_PATH);
+    result = sanitizeAhrefsSiteAuditResult(
       await collectAhrefsSiteAuditHealth({
         apiKey: options.apiKey ?? process.env.AHREFS_API_KEY,
         brands,
@@ -59,27 +67,52 @@ export async function runAhrefsSiteAuditHealth(options = {}) {
         fetchImpl: options.fetchImpl,
       }),
     );
-    writeFileSync(outputPath, renderAhrefsSiteAuditMarkdown(result), 'utf8');
-    return { ok: result.status === 'complete', outputPath, result };
   } catch (error) {
-    writeFileSync(
+    ahrefsError = {
+      schema: AHREFS_SITE_AUDIT_ERROR_SCHEMA,
+      status: 'blocked',
+      code: error?.code ?? 'unknown-error',
+      httpStatus: error?.httpStatus ?? null,
+      message: error?.message ?? 'Ahrefs Site Audit collection failed',
       outputPath,
-      renderAhrefsSiteAuditErrorMarkdown(error, { now: options.now }),
-      'utf8',
-    );
-    return {
-      ok: false,
-      outputPath,
-      error: {
-        schema: AHREFS_SITE_AUDIT_ERROR_SCHEMA,
-        status: 'blocked',
-        code: error?.code ?? 'unknown-error',
-        httpStatus: error?.httpStatus ?? null,
-        message: error?.message ?? 'Ahrefs Site Audit collection failed',
-        outputPath,
-      },
     };
+    if (!brands) {
+      writeFileSync(
+        outputPath,
+        renderAhrefsSiteAuditErrorMarkdown(error, { now: options.now }),
+        'utf8',
+      );
+      return { ok: false, outputPath, error: ahrefsError, actions: [] };
+    }
   }
+
+  const local = act
+    ? await collectLocalSiteAudit({
+      brands,
+      fetchImpl: options.localFetchImpl ?? options.fetchImpl,
+      maxPagesPerRoot: options.maxPagesPerRoot,
+      now: options.now,
+    })
+    : null;
+  const markdown = [
+    result
+      ? renderAhrefsSiteAuditMarkdown(result)
+      : renderAhrefsSiteAuditErrorMarkdown(
+        { code: ahrefsError.code, httpStatus: ahrefsError.httpStatus, message: ahrefsError.message },
+        { now: options.now },
+      ),
+    local ? renderLocalSiteAuditMarkdown(local) : '',
+  ].join('\n');
+  writeFileSync(outputPath, markdown, 'utf8');
+  const errorActions = local?.summary.errorActions ?? 0;
+  return {
+    ok: Boolean(result) && result.status === 'complete' && errorActions === 0,
+    outputPath,
+    result,
+    error: ahrefsError,
+    local,
+    actions: local?.actions ?? [],
+  };
 }
 
 function argument(name, argv = process.argv) {
@@ -95,14 +128,15 @@ export async function main(argv = process.argv) {
     brandsPath: argument('--brands-path', argv),
     outputPath: argument('--output', argv),
     maxAgeDays: maxAgeDays == null ? undefined : Number(maxAgeDays),
+    act: !argv.includes('--no-act'),
   });
-  if (outcome.result) {
-    process.stdout.write(`${JSON.stringify(outcome.result, null, 2)}\n`);
-    if (!outcome.ok) process.exitCode = 1;
-    return outcome;
-  }
-  process.stdout.write(`${JSON.stringify(outcome.error, null, 2)}\n`);
-  process.exitCode = 1;
+  process.stdout.write(`${JSON.stringify({
+    ahrefs: outcome.result ?? outcome.error,
+    local: outcome.local
+      ? { schema: outcome.local.schema, summary: outcome.local.summary, actions: outcome.actions }
+      : null,
+  }, null, 2)}\n`);
+  if (!outcome.ok) process.exitCode = 1;
   return outcome;
 }
 
