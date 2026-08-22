@@ -43,7 +43,12 @@ node --test test/*.test.mjs
 node scripts/validate-tooling.mjs
 node scripts/audit.mjs --mode availability --runs 1
 node scripts/audit.mjs --mode performance --runs 3
+node scripts/ahrefs-site-audit-health.mjs
 ```
+
+Ahrefs Site Audit health is an entitled operator workflow. Keep `AHREFS_API_KEY`
+runtime-only, fail closed without entitlement, and read canonical roots from
+Site Health. Do not advertise it as a credential-free catalog entrypoint.
 
 Use Node.js 20 or newer. The repository intentionally has no npm runtime or
 development dependencies.
