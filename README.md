@@ -51,9 +51,9 @@ node scripts/audit.mjs --mode performance --runs 3
 node scripts/ahrefs-site-audit-health.mjs
 ```
 
-`ahrefs-site-audit-health.mjs` needs a runtime `AHREFS_API_KEY` and the sibling
-Site Health brand catalog. It fails closed without them. See
-[`docs/ahrefs-site-audit.md`](docs/ahrefs-site-audit.md).
+`ahrefs-site-audit-health.mjs` reads the sibling Site Health brand catalog
+and crawls each root. Ahrefs Health Scores are optional and fail closed
+without entitlement. See [`docs/ahrefs-site-audit.md`](docs/ahrefs-site-audit.md).
 
 Generated reports contain public URLs, status codes, redirect destinations,
 timings, timestamps, and bounded error categories. Response bodies are never

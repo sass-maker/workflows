@@ -1,8 +1,12 @@
-# Ahrefs Site Audit health
+# Canonical-root site audit
 
-Collect Ahrefs Site Audit Health Score for Site Health's canonical roots,
-then turn crawl evidence into source actions. A report without remediation
-is incomplete.
+The working path is a local sitemap crawl of Site Health's canonical roots,
+then source actions for 4xx pages, missing titles, and missing h1s. A report
+without remediation is incomplete.
+
+Ahrefs Health Scores are optional. The Infisical `AHREFS_API_KEY` currently
+returns HTTP 401, so provider scores stay fail-closed until an entitled key
+exists.
 
 This is a reusable operator workflow. It is not a Site Health product surface
 and it is not part of the credential-free public availability catalog.
@@ -13,9 +17,10 @@ and it is not part of the credential-free public availability catalog.
 node scripts/ahrefs-site-audit-health.mjs
 ```
 
-The command always attempts Ahrefs, then crawls each root sitemap and emits
-source actions. Use `--no-act` only when you need the provider report without
-the local crawl.
+The command crawls each root sitemap and emits source actions. It also
+attempts Ahrefs when a key is present; missing entitlement does not skip
+the local crawl. Use `--no-act` only when you need the provider report
+without actions.
 
 Optional flags:
 

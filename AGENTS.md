@@ -46,9 +46,10 @@ node scripts/audit.mjs --mode performance --runs 3
 node scripts/ahrefs-site-audit-health.mjs
 ```
 
-Ahrefs Site Audit health is an entitled operator workflow. Keep `AHREFS_API_KEY`
-runtime-only, fail closed without entitlement, and read canonical roots from
-Site Health. Do not advertise it as a credential-free catalog entrypoint.
+Canonical-root site audit is an operator workflow whose working path is a
+local sitemap crawl plus source actions. Keep any `AHREFS_API_KEY` runtime-only
+and fail closed without entitlement. Do not advertise the script as a
+credential-free catalog entrypoint.
 
 Use Node.js 20 or newer. The repository intentionally has no npm runtime or
 development dependencies.
